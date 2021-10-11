@@ -136,7 +136,7 @@ void LinkedList<Type>::AddAtIndex(const int index, const Type& val)
 template <typename Type>
 void LinkedList<Type>::DeleteAtIndex(const int index)
 {
-	if(index<0 || index>len) return; // 유효하지 않은 범위면 return
+	if(index<0 || index>=len) return; // 유효하지 않은 범위면 return
 	else if(index==0){
 		Node<Type> *cur = head;
 		head = cur -> link; // head를 head 다음 node로 변경
@@ -254,6 +254,7 @@ void LinkedList<Type>::K_Reverse(const int k)
 
 template <typename Type>
 void LinkedList<Type>::IndexSort(const int str, const int end, const bool increase) {
+	if(str==end) return;
 	Node<Type> *jNode=head->link;
 	Node<Type> *iNode=head;
 	int iVal, jVal, tem, temIndex;
@@ -324,6 +325,7 @@ void LinkedList<Type>::CleanUp()
 template <typename Type>
 void LinkedList<Type>::Print()
 {
+	if(len==0) return;
 	Node<Type> *cur = head;
 	cout<<"("<<cur -> data;
 	for(int i=1; i<len; i++) {
