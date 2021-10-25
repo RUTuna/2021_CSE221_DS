@@ -31,12 +31,24 @@ int main() {
     string postfix = to_postfix(infix);
     cout << postfix << endl; // -1 2 -3 4 * + * -2 /
 
-    // part 3: evaluate an expression tree
-    Tree* postfix_tree = build_expression_tree(postfix);
-    postfix_tree->print(); // (/,*,-2,-1,+,null,null,null,null,2,*,null,null,-3,4)
+    infix = "-(2+3)";
+    postfix = to_postfix(infix);
+    cout << postfix << endl; // -1 2 3 + *
 
-    cout << postfix_tree->eval() << endl; // -5
+    infix = "(7+4)*2-1";
+    postfix = to_postfix(infix);
+    cout << postfix << endl; // 7 4 + 2 * 1 –
 
-    delete postfix_tree;
+    infix = "-10 + 3 - 2";
+    postfix = to_postfix(infix);
+    cout << postfix << endl; // –10 3 + 2 –
+
+    // // part 3: evaluate an expression tree
+    // Tree* postfix_tree = build_expression_tree(postfix);
+    // postfix_tree->print(); // (/,*,-2,-1,+,null,null,null,null,2,*,null,null,-3,4)
+
+    // cout << postfix_tree->eval() << endl; // -5
+
+    // delete postfix_tree;
     return 0;
 }
