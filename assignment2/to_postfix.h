@@ -42,14 +42,20 @@ string to_postfix(const string& infix) {
       break;
     }
     // if(infix_cal[i]==' ') continue;
-    if(infix_cal[i]=='-'&&infix_cal[i+1]=='(') { // "-(" -> "-1 * ("
-      infix_Q.push("-1");
-      infix_Q.push("*");
-    }
-    else if(infix_cal[i]=='-'&&infix_cal[i-1]<'0') currStr.push_back(infix_cal[i]); // '-' 전이 operator이면 unary minus
-    else if(infix_cal[i]>='0' || infix_cal[i]=='.') currStr.push_back(infix_cal[i]); // 숫자면 currStr에 추가 후 push
+    if(infix_cal[i]=='-') { // "-(" -> "-1 * ("
+      if(infix_cal[i-1]>='0') { // '-' 전이 operand면 binary minus
+      infix_Q.push(currStr);
+        currStr = "";
+        currStr.push_back(infix_cal[i]);
+        infix_Q.push(currStr);
+        currStr = "";
+      } else if(infix_cal[i+1]=='('){      
+        infix_Q.push("-1");
+        infix_Q.push("*");
+      } else currStr.push_back(infix_cal[i]); // '-' 전이 operator이면 unary minus
+    } else if(infix_cal[i]>='0' || infix_cal[i]=='.') currStr.push_back(infix_cal[i]); // 숫자면 currStr에 추가 후 push
     else {
-      if(currStr.size()>0) {
+      if(currStr.size()>0) { // operand
         infix_Q.push(currStr);
         currStr = "";
       }
@@ -63,18 +69,19 @@ string to_postfix(const string& infix) {
   while(!infix_Q.empty()){
     curr = infix_Q.front();
     if(curr==")"){
-      for (; operator_S.top()!="("; operator_S.pop()) postfix = postfix + operator_S.top() + " ";
+      for (; operator_S.top()!="("; operator_S.pop()) postfix = postfix + " " + operator_S.top();
       operator_S.pop();
     } else if(curr.size()==1 && curr<"0") { // operator
-      for (; isp(operator_S.top())<=icp(curr); operator_S.pop()) postfix = postfix + operator_S.top() + " ";
+      for (; isp(operator_S.top())<=icp(curr); operator_S.pop()) postfix = postfix + " " + operator_S.top();
       operator_S.push(curr);
     } else { // operand
-      postfix = postfix + curr + " ";
+      if(postfix.size()==0) postfix = postfix + curr;
+      else postfix = postfix + " " + curr;
     }
     infix_Q.pop();
   }
   while(operator_S.top()!="#" && !operator_S.empty()){
-    postfix = postfix + operator_S.top() + " ";
+    postfix = postfix + " " + operator_S.top();
     operator_S.pop();
   }
   return postfix;
