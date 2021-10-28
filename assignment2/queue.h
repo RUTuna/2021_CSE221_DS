@@ -59,10 +59,10 @@ template <typename type>
 void Queue<type>::push(const type &item) {
   QNode<type> *addQNode = new QNode<type>; // 추가할 QNode
 	addQNode -> data = item;
-  if(len==0) { // list가 비어있으면 head에
+  if(len==0) { // list가 비어있으면 head, tail
 		head = addQNode;
     tail = addQNode;
-	} else {
+	} else { // tail 뒤에 연결 후 tail로
 		tail -> link = addQNode;
 		tail = addQNode;
 	}
@@ -72,7 +72,6 @@ void Queue<type>::push(const type &item) {
 template <typename type>
 type& Queue<type>::front() const {
   if(len!=0) return head->data;
-  // else return NULL; // 수정합시다!
 }
 
 template <typename type>

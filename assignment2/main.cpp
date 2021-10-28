@@ -148,10 +148,38 @@ int main() {
     else cout<<"Eval FAIL"<<endl;
 
 
+    cout<<"TEST 11"<<endl;
+    infix = "";
+    postfix = to_postfix(infix);
+    cout << postfix << endl; // 
+    if(postfix == "") cout<<"PASS"<<endl;
+    else cout<<"FAIL"<<endl;
+
+
+    cout<<"TEST 12"<<endl;
+    infix = " ";
+    postfix = to_postfix(infix);
+    cout << postfix << endl; // 
+    if(postfix == "") cout<<"PASS"<<endl;
+    else cout<<"FAIL"<<endl;
+
+
+    cout<<"TEST 13"<<endl;
+    infix = "(2*3)-(1+2)";
+    postfix = to_postfix(infix);
+    cout << postfix << endl; // 2 3 * 1 2 + -
+    if(postfix == "2 3 * 1 2 + -") cout<<"PASS"<<endl;
+    else cout<<"FAIL"<<endl;
+
+    postfix_tree = build_expression_tree(postfix);
+    if(postfix_tree->eval() == 3) cout<<"Eval PASS"<<endl;
+    else cout<<"Eval FAIL"<<endl;
+
+
 
     // part 3: evaluate an expression tree
     // Tree* postfix_tree = build_expression_tree(postfix);
-    // postfix_tree->print(); // (/,*,-2,-1,+,null,null,null,null,2,*,null,null,-3,4)
+    postfix_tree->print(); // TEST 1 (/,*,-2,-1,+,null,null,null,null,2,*,null,null,-3,4)
 
     // cout << postfix_tree->eval() << endl; // -5
 

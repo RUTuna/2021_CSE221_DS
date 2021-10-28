@@ -56,9 +56,9 @@ template <typename type>
 void Stack<type>::push(const type &item) {
   SNode<type> *addSNode = new SNode<type>; // 추가할 SNode
 	addSNode -> data = item;
-  if(len==0) { // list가 비어있으면 head에
+  if(len==0) { // list가 비어있으면 바로 head
 		head = addSNode;
-	} else {
+	} else { // head 앞에 추가 후 head로
 		addSNode -> link = head;
 		head = addSNode;
 	}
@@ -68,7 +68,6 @@ void Stack<type>::push(const type &item) {
 template <typename type>
 type& Stack<type>::top() const {
   if(len!=0) return head->data;
-  // else return NULL; // 수정합시다!
 }
 
 template <typename type>

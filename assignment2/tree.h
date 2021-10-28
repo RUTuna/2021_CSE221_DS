@@ -48,7 +48,7 @@ struct Tree {
 		return size;
 	}
 
-	int len() {
+	int len() { // null 제외한 길이
 		int len = 1;
 		if(expr!="null"){
 			if (left != NULL) { len += left->len(); }
@@ -63,7 +63,7 @@ struct Tree {
 };
 
 // -------- implement below --------
-double cal(const string& op, double a, double b) {
+double cal(const string& op, double a, double b) { // evaluation
 	if(op=="+") return a+b;
 	if(op=="-") return a-b;
 	if(op=="*") return a*b;
@@ -83,67 +83,60 @@ void Tree::print() {
 		res = res + currNode->expr + ",";
 		if(currNode->left) level_Q.push(currNode->left);
 		if(currNode->right) level_Q.push(currNode->right);
-		if(currNode->expr!="null") i++;
+		if(currNode->expr!="null") i++; // null이 아닐 때만 index 증가
 		if(level_Q.empty()) break;
 		currNode = level_Q.front();
 		level_Q.pop();
 	}
-	res.erase(res.size()-1,1); // 마지막 , 제거
+	if(res[res.size()-1]==',') res.erase(res.size()-1,1); // 마지막에 , 있으면 제거
 	res = res + ")";
 	cout<<res<<endl;
 }
 
 double Tree::eval() {
-	double test;
+	double evalResult;
 	double lEval;
 	double rEval;
 	if( expr.size()==0 || expr=="null") return 0.0;
 	else if(left->expr == "null" && right->expr == "null") { // operand
-		return atof(expr.c_str());
+		return atof(expr.c_str()); // sting to double
 	} else {
 		lEval = left->eval();
 		rEval = right->eval();
-		test = cal(expr, lEval, rEval);
-		// cout<<expr<< " " << lEval << " " <<  rEval<< " " << test << " \n";
-		return test;
+		evalResult = cal(expr, lEval, rEval);
+		return evalResult;
 	}
 }
 
 Tree* build_expression_tree(const string& postfix) {
-	Stack<Tree*> tree_S;
-	Tree* exprTree = new Tree;
-	string expression = "";
+	Stack<Tree*> tree_S; // expression subtree 저장
+	Tree* exprTree = new Tree; // expression tree
+	string expression = ""; // 토큰화된 expression
 	int i=0;
 
 	while(true){
-		Tree* currTree = new Tree; // 새로운 트리의 주소 매번 생성
-		while(postfix[i]!=' ' && postfix[i]!='\0'){
+		Tree* currTree = new Tree; // 추가할 트리의 주소 매번 생성
+		while(postfix[i]!=' ' && postfix[i]!='\0'){ // 공백 단위로 토큰화
 			expression.push_back(postfix[i]);
 			i++;
 		}
-		if(expression.size() == 0)break;
-		// cout<<expression<<endl;
-		if(expression.size()==1 && expression<"0") { // operator
+		if(expression.size() == 0) break;
+		if(expression.size()==1 && expression<"0") { // operator면 2개 pop해서 subtree 제작
 			currTree->right = tree_S.top();
 			tree_S.pop();
 			currTree->left = tree_S.top();
 			tree_S.pop();
-		} else {
+		} else { // operand면 left, right이 null인 subtree 제작
 			currTree->right = currTree->left = new Tree("null");
 		}
 		currTree->expr = expression;
 		tree_S.push(currTree);
-
-		// cout<<"curr "<<currTree->expr<<endl;
-		// if(currTree->left != NULL) cout<<"left "<<currTree->left->expr<<endl;
-		// if(currTree->right != NULL) cout<<"right "<<currTree->right->expr<<endl;
 
 		if(postfix[i]=='\0') break;
 		expression="";
 		i++;
 	}
 	exprTree = tree_S.top();
-	// cout<<exprTree->size() << " " <<exprTree->len()<<endl;
 	return exprTree;
 }
 
