@@ -102,7 +102,7 @@ int HierarchyHash::insert(const unsigned int key)
   int timeCost = 1;
   int searchCost = search(key);
   unsigned int index = hashFunction(key); // real index
-  unsigned int mainIndex = index / sub_table_size; // 메인 계층 내의 subtable 위치
+  unsigned int mainIndex = index / sub_table_size; // maintable 내의 subtable 위치
   unsigned int subIndex = index % sub_table_size; // subtable 내의 index
   bool isLinear = flag == LINEAR_PROBING ? true : false;
 
@@ -216,7 +216,7 @@ int HierarchyHash::remove(const unsigned int key)
   int timeCost = 0;
   int searchCost = search(key);
   unsigned int index; // real index
-  unsigned int mainIndex; // 메인 계층 내의 subtable 위치
+  unsigned int mainIndex; // maintable 내의 subtable 위치
   unsigned int subIndex ; // subtable 내의 index
   bool isLinear = flag == LINEAR_PROBING ? true : false;
 
@@ -278,7 +278,7 @@ int HierarchyHash::search(const unsigned int key)
   // Write your code
   int timeCost = 0;
   unsigned int index; // real index
-  unsigned int mainIndex; // 메인 계층 내의 subtable 위치
+  unsigned int mainIndex; // maintable 내의 subtable 위치
   unsigned int subIndex; // subtable 내의 index
   bool isLinear = flag == LINEAR_PROBING ? true : false;
 

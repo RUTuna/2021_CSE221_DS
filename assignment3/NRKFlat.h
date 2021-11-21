@@ -112,8 +112,9 @@ bool NRKFlat::filter(const unsigned int key)
   h1=hashFunction(h1);
   h2=hashFunction(h2);
   h3=hashFunction(h3);
-  if(counters[h1]&&counters[h2]&&counters[h3]) return true;
-  else return false;
+
+  if(counters[h1]&&counters[h2]&&counters[h3]) return true; // 3개 모두 0이 아닐 경우
+  else return false; // 하나라도 0일 경우
 }
 
 int NRKFlat::insert(const unsigned int key)
@@ -129,11 +130,11 @@ int NRKFlat::insert(const unsigned int key)
   counters[h2]++;
   counters[h3]++;
 
-  if(filter_size != getTableSize()){
+  if(filter_size != getTableSize()){ // table이 resize 되었으면 counters도 resize
     unsigned int value;
-    unsigned int* originCounter = counters;
+    unsigned int* originCounter = counters; // 기존 counters
     filter_size = getTableSize();
-    counters = new unsigned int [filter_size]();
+    counters = new unsigned int [filter_size](); // resize된 counters
 
     for(unsigned int i=0; i<filter_size/2; i++){
       value = getValue(i);

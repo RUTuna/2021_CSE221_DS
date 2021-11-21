@@ -70,7 +70,7 @@ FlatHash::FlatHash(enum overflow_handle _flag, float _alpha)
 FlatHash::~FlatHash()
 {
   // Write your code
-  delete hashtable;
+  delete[] hashtable;
 }
 
 int FlatHash::insert(const unsigned int key)
@@ -82,7 +82,7 @@ int FlatHash::insert(const unsigned int key)
   unsigned int index = hashFunction(key);
   bool isLinear = flag == LINEAR_PROBING ? true : false;
 
-  if(searchCost > 0) { // 중복
+  if(searchCost > 0) { // hashtable 내에 존재하면 (중복)
     return -1*searchCost;
   } else if(hashtable[index]==0 || hashtable[index]==TOMBSTONE){ // useable
     hashtable[index] = key;
@@ -97,29 +97,30 @@ int FlatHash::insert(const unsigned int key)
         break;
       }
 
-      if(!isLinear && (unsigned int)timeCost >= table_size){ // linear로 변경 후 다시 시작
-        i=0; // reset
+      if(!isLinear && (unsigned int)timeCost >= table_size){ // QUADRATIC_PROBING의 경우 linear로 변경 후 다시 시작
+        i=0; // reset (i가 1부터 시작하므로) 
         isLinear = true;
         timeCost++;
       }
     }
   }
 
-  if((double)num_of_keys/table_size >= alpha) resize(); // resize 필요 여부 확인
+  if((double)num_of_keys/table_size >= alpha) resize(); // resize 필요 시 수행
   return timeCost;
 }
 
 void FlatHash::resize(){
-  unsigned int* origintable = hashtable;
+  unsigned int* origintable = hashtable; // 기존 hashtable
   table_size*=2;
   num_of_keys = 0;
-  hashtable = new unsigned int[table_size]();
+  hashtable = new unsigned int[table_size](); // resize된 hashtable
   hashtable[0] = -1;
+
   for(unsigned int i=1; i<table_size/2; i++){
-      if(origintable[i]!=0 && origintable[i]!=TOMBSTONE) insert(origintable[i]);
-      else if(flag == QUADRATIC_PROBING) hashtable[i] = TOMBSTONE;
+    if(origintable[i]!=0 && origintable[i]!=TOMBSTONE) insert(origintable[i]); // insert로 넣어주어야 함
+    else if(flag == QUADRATIC_PROBING) hashtable[i] = TOMBSTONE;
   }
-  delete origintable;
+  delete[] origintable;
 }
 
 void FlatHash::shifting(const unsigned int start){
@@ -129,7 +130,7 @@ void FlatHash::shifting(const unsigned int start){
   unsigned int tmpIndex; // 바꿀 위치 탐색 index
 
   for(; currIndex<table_size; currIndex++){
-    if(hashtable[currIndex]!=0 && hashtable[currIndex]!=TOMBSTONE){ // 사용 중이면 shift 유무 확인
+    if(hashtable[currIndex]!=0 && hashtable[currIndex]!=TOMBSTONE){ // 사용 중이면 shift 필요 여부 확인
       index = currIndex;
       key = hashtable[index];
       for(unsigned int i=0;;i++){
@@ -163,13 +164,13 @@ int FlatHash::remove(const unsigned int key)
         num_of_keys--;
         if(flag == LINEAR_PROBING) shifting(index);
         break;
-      } else if(hashtable[index]==0 || hashtable[index]==TOMBSTONE){ // 못 찾음
+      } else if(hashtable[index]==0 || hashtable[index]==TOMBSTONE){ // 범위에서 못 찾음
         timeCost*=-1;
         break;
       }
 
       if(!isLinear && (unsigned int)timeCost >= table_size){ // linear로 변경 후 다시 시작
-        i=-1; // reset
+        i=-1; // reset (i가 0부터 시작하므로)
         isLinear = true;
         timeCost++;
       }
@@ -189,15 +190,15 @@ int FlatHash::search(const unsigned int key)
   for(unsigned int i=0;;i++){
     timeCost++;
     index = hashFunction(isLinear ? key+i : key+(i*i));
-    if(hashtable[index] == key){ // key 찾음
+    if(hashtable[index] == key){ // found
       break;
-    } else if(hashtable[index]==0 || hashtable[index]==TOMBSTONE){ // 빈 슬롯
+    } else if(hashtable[index]==0 || hashtable[index]==TOMBSTONE){ // empty slot
       timeCost*=-1;
       break;
     }
 
     if(!isLinear && (unsigned int)timeCost >= table_size){ // linear로 변경 후 다시 시작
-      i=-1; // reset
+      i=-1; // reset (i가 0부터 시작하므로)
       isLinear = true;
       timeCost++;
     }
@@ -209,14 +210,14 @@ void FlatHash::clearTombstones()
 {
   // Write your code
   if(flag == QUADRATIC_PROBING){
-    unsigned int* origintable = hashtable;
+    unsigned int* origintable = hashtable; // 기존 hashtable
     num_of_keys = 0;
-    hashtable = new unsigned int[table_size]();
+    hashtable = new unsigned int[table_size](); // TOMBSTONE 제거된 hashtable
     hashtable[0] = -1;  
     for(unsigned int i=1; i<table_size; i++){
       if(origintable[i]!=0 && origintable[i]!=TOMBSTONE) insert(origintable[i]);
     }
-    delete origintable;
+    delete[] origintable;
   }
 }
 
