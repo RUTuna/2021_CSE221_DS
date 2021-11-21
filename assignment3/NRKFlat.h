@@ -43,13 +43,14 @@ NRKFlat::NRKFlat(enum overflow_handle _flag, float _alpha, unsigned int _filter_
 {
   filter_size = _filter_size;
   // Write your code
-
+  counters = new unsigned int [filter_size]();
 }
 
 NRKFlat::~NRKFlat()
 {
   // Write your code
-
+  filter_size = 0;
+  delete counters;
 }
 
 unsigned int NRKFlat::murmurHash2(const void* key){
@@ -99,7 +100,6 @@ void NRKFlat::getMMHashValue(const unsigned int key, unsigned int& h1, unsigned 
   h1 = murmurHash2(INT2VOIDP(&key));
   h2 = murmurHash2(INT2VOIDP(&h1));
   h3 = murmurHash2(INT2VOIDP(&h2));
-  
 }
 
 bool NRKFlat::filter(const unsigned int key)
@@ -109,25 +109,50 @@ bool NRKFlat::filter(const unsigned int key)
   getMMHashValue(key, h1, h2, h3);
 
   // Write your code
-
+  h1=hashFunction(h1);
+  h2=hashFunction(h2);
+  h3=hashFunction(h3);
+  if(counters[h1]&&counters[h2]&&counters[h3]) return true;
+  else return false;
 }
 
 int NRKFlat::insert(const unsigned int key)
 {
   // Write your code
+  unsigned int h1, h2, h3;
+  getMMHashValue(key, h1, h2, h3);
+  h1=hashFunction(h1);
+  h2=hashFunction(h2);
+  h3=hashFunction(h3);
 
+  counters[h1]++;
+  counters[h2]++;
+  counters[h3]++;
+  return FlatHash::insert(key);
 }
 
 int NRKFlat::remove(const unsigned int key)
 {
   // Write your code
+  if(!filter(key)) return 0;
 
+  unsigned int h1, h2, h3;
+  getMMHashValue(key, h1, h2, h3);
+  h1=hashFunction(h1);
+  h2=hashFunction(h2);
+  h3=hashFunction(h3);
+
+  counters[h1]--;
+  counters[h2]--;
+  counters[h3]--;
+  return FlatHash::remove(key);
 }
 
 int NRKFlat::search(const unsigned int key)
 {
   // Write your code
-
+  if(!filter(key)) return 0;
+  return FlatHash::search(key);
 }
 
 #endif

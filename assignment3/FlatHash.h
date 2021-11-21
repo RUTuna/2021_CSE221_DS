@@ -4,7 +4,7 @@
 #include <iostream>
 
 #define TOMBSTONE 9999999
-using namespace std;
+
 // Flag(hint) for overflow handling
 enum overflow_handle {
   LINEAR_PROBING = 0,
@@ -230,8 +230,8 @@ void FlatHash::print()
   for(unsigned int i=1; i<table_size; i++){
     if(hashtable[i]!=0 && hashtable[i]!=TOMBSTONE){
       count++;
-      cout<<i<<":"<<hashtable[i];
-      if(count<num_of_keys) cout<<",";
+      std::cout<<i<<":"<<hashtable[i];
+      if(count<num_of_keys) std::cout<<",";
     }
   }
 
