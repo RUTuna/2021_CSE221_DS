@@ -61,7 +61,7 @@ FlatHash::FlatHash(enum overflow_handle _flag, float _alpha)
   alpha = _alpha;
   
   // Write your code
-  hashtable = new unsigned int[table_size+1]();
+  hashtable = new unsigned int[table_size]();
   hashtable[0] = -1; // 0 index 사용 안함
 }
 
@@ -78,6 +78,7 @@ int FlatHash::insert(const unsigned int key)
   int timeCost = 1;
   int searchCost = search(key);
   unsigned int index = hashFunction(key);
+  bool isLinear = flag == LINEAR_PROBING ? true : false;
 
   if(searchCost > 0) { // 중복
     return -1*searchCost;
@@ -85,30 +86,19 @@ int FlatHash::insert(const unsigned int key)
     hashtable[index] = key;
     num_of_keys++;
   } else { // overflow
-    for(int i=1;;i++){
+    for(unsigned int i=1;;i++){
       timeCost++;
-      index = hashFunction(flag == LINEAR_PROBING ? key+i : key+(i*i));
+      index = hashFunction(isLinear ? key+i : key+(i*i));
       if(hashtable[index]==0 || hashtable[index]==TOMBSTONE){
         hashtable[index] = key;
         num_of_keys++;
         break;
       }
-      
-      if((unsigned int)timeCost >= table_size){
-        index=hashFunction(key);
-        timeCost++;
 
-        while(true){
-          index++;
-          timeCost++;
-          if(index==table_size) index=0;
-          if(hashtable[index]==0 || hashtable[index]==TOMBSTONE){
-            hashtable[index] = key;
-            num_of_keys++;
-            break;
-          }
-        }
-        break;
+      if(!isLinear && (unsigned int)timeCost >= table_size){ // linear로 변경 후 다시 시작
+        i=0; // reset
+        isLinear = true;
+        timeCost++;
       }
     }
   }
@@ -119,13 +109,15 @@ int FlatHash::insert(const unsigned int key)
 
 void FlatHash::resize(){
   unsigned int* origintable = hashtable;
-  hashtable = new unsigned int[table_size*2 +1]();
+  table_size*=2;
+  num_of_keys = 0;
+  hashtable = new unsigned int[table_size]();
   hashtable[0] = -1;
-  for(unsigned int i=1;i<=table_size/2;i++){
+  for(unsigned int i=1; i<table_size/2; i++){
       if(origintable[i]!=0 && origintable[i]!=TOMBSTONE) insert(origintable[i]);
-      else if(origintable[i]!=TOMBSTONE) hashtable[i] = TOMBSTONE;
-
+      else if(flag == QUADRATIC_PROBING) hashtable[i] = TOMBSTONE;
   }
+  delete origintable;
 }
 
 void FlatHash::shifting(const unsigned int start){
@@ -135,11 +127,11 @@ void FlatHash::shifting(const unsigned int start){
   unsigned int tmpIndex; // 바꿀 위치 탐색 index
 
   for(; currIndex<table_size; currIndex++){
-    if(hashtable[currIndex]!=0){ // 사용 중이면 shift 유무 확인
+    if(hashtable[currIndex]!=0 && hashtable[currIndex]!=TOMBSTONE){ // 사용 중이면 shift 유무 확인
       index = currIndex;
       key = hashtable[index];
-      for(int i=0;;i++){
-        tmpIndex = hashFunction(key+i);
+      for(unsigned int i=0;;i++){
+        tmpIndex = hashFunction(flag == LINEAR_PROBING ? key+i : key+(i*i));
         if(tmpIndex>=index) break; // shift 불필요
         else if(hashtable[tmpIndex]==0){
           hashtable[tmpIndex] = key;
@@ -156,20 +148,28 @@ int FlatHash::remove(const unsigned int key)
   int timeCost = 0;
   int searchCost = search(key);
   unsigned int index = hashFunction(key);
+  bool isLinear = flag == LINEAR_PROBING ? true : false;
 
   if(searchCost < 0) { // 존재하지 않음
     return searchCost;
-  } else{
-    for(int i=0;;i++){
+  } else {
+    for(unsigned int i=0;;i++){
       timeCost++;
-      index = hashFunction(flag == LINEAR_PROBING ? key+i : key+(i*i));
-      if(hashtable[index]==key){
+      index = hashFunction(isLinear ? key+i : key+(i*i));
+      if(hashtable[index] == key){
         hashtable[index] = flag == LINEAR_PROBING ? 0 : TOMBSTONE;
         num_of_keys--;
+        if(flag == LINEAR_PROBING) shifting(index);
         break;
-      } else if(hashtable[index]==0 || hashtable[index]==TOMBSTONE || index > table_size){ // 못 찾음
+      } else if(hashtable[index]==0 || hashtable[index]==TOMBSTONE){ // 못 찾음
         timeCost*=-1;
         break;
+      }
+
+      if(!isLinear && (unsigned int)timeCost >= table_size){ // linear로 변경 후 다시 시작
+        i=-1; // reset
+        isLinear = true;
+        timeCost++;
       }
     }
   }
@@ -182,15 +182,22 @@ int FlatHash::search(const unsigned int key)
   // Write your code
   int timeCost = 0;
   unsigned int index;
+  bool isLinear = flag == LINEAR_PROBING ? true : false;
 
-  for(int i=0;;i++){
+  for(unsigned int i=0;;i++){
     timeCost++;
-    index = hashFunction(flag == LINEAR_PROBING ? key+i : key+(i*i));
-    if(hashtable[index]==key){
+    index = hashFunction(isLinear ? key+i : key+(i*i));
+    if(hashtable[index] == key){ // key 찾음
       break;
-    } else if(hashtable[index]==0 || index > table_size || hashtable[index]==TOMBSTONE){ // 못 찾음
+    } else if(hashtable[index]==0 || hashtable[index]==TOMBSTONE){ // 빈 슬롯
       timeCost*=-1;
       break;
+    }
+
+    if(!isLinear && (unsigned int)timeCost >= table_size){ // linear로 변경 후 다시 시작
+      i=-1; // reset
+      isLinear = true;
+      timeCost++;
     }
   }
   return timeCost;
@@ -200,10 +207,14 @@ void FlatHash::clearTombstones()
 {
   // Write your code
   if(flag == QUADRATIC_PROBING){
-    for(unsigned int i=1; i<=table_size; i++){
-      if(hashtable[i] == TOMBSTONE) hashtable[i] = 0;
+    unsigned int* origintable = hashtable;
+    num_of_keys = 0;
+    hashtable = new unsigned int[table_size]();
+    hashtable[0] = -1;  
+    for(unsigned int i=1; i<table_size; i++){
+      if(origintable[i]!=0 && origintable[i]!=TOMBSTONE) insert(origintable[i]);
     }
-    shifting(0);
+    delete origintable;
   }
 }
 
@@ -216,7 +227,7 @@ void FlatHash::print()
 
   // Write your code
   unsigned int count = 0;
-  for(unsigned int i=1; i<=table_size; i++){
+  for(unsigned int i=1; i<table_size; i++){
     if(hashtable[i]!=0 && hashtable[i]!=TOMBSTONE){
       count++;
       cout<<i<<":"<<hashtable[i];

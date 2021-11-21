@@ -4,6 +4,9 @@
 #include <iostream>
 #include "FlatHash.h"
 
+#define TOMBSTONE 9999999
+using namespace std;
+
 class HierarchyHash
 {
 private:
@@ -16,9 +19,12 @@ private:
   unsigned int table_size;
   // Size of subhash table. Fixed by 100
   unsigned int sub_table_size;
+  // Size of main hash table
+  unsigned int main_table_size;
   // Nums of keys
   unsigned int num_of_keys;
-
+  // Nums of subhash table's keys
+  unsigned int* num_of_subkeys;
 
 public:
   HierarchyHash(enum overflow_handle _flag, float _alpha);
@@ -36,9 +42,12 @@ public:
 
   // Return time cost
   int insert(const unsigned int key);
+  void resize();
 
   // Return time cost
+  void shifting(const unsigned int startMain, const unsigned int startSub);
   int remove(const unsigned int key);
+  void deleteSub();
 
   // Return time cost
   int search(const unsigned int key);
@@ -55,47 +64,268 @@ HierarchyHash::HierarchyHash(enum overflow_handle _flag, float _alpha)
   table_size = 1000;
   // Table size is fixed to 100
   sub_table_size = 100;
+  num_of_keys = 0;
   flag = _flag;
   alpha = _alpha;
 
   // Write your code
-
+  num_of_subkeys = new unsigned int [main_table_size]();
+  main_table_size = table_size/sub_table_size;
+	hashtable = new unsigned int *[main_table_size];
+  for(unsigned int i=0; i<main_table_size; i++){
+    hashtable[i] = NULL;
+	}
 }
 
 HierarchyHash::~HierarchyHash()
 {
   // Write your code
-
+  for(unsigned int i=0; i<main_table_size; i++){
+    if(hashtable[i]) delete hashtable[i];
+	}
+  delete hashtable;
 }
 
 unsigned int HierarchyHash::getAllocatedSize()
 {
   // Write your code
-
+	unsigned int allocatedSize=0;
+	for(unsigned int i=0; i<main_table_size; i++){
+    if(hashtable[i]) allocatedSize+=sub_table_size;
+  }
+  return allocatedSize;
 }
 
 int HierarchyHash::insert(const unsigned int key)
 {
   // Write your code
+  int timeCost = 1;
+  int searchCost = search(key);
+  unsigned int index = hashFunction(key); // real index
+  unsigned int mainIndex = index / sub_table_size; // 메인 계층 내의 subtable 위치
+  unsigned int subIndex = index % sub_table_size; // subtable 내의 index
+  bool isLinear = flag == LINEAR_PROBING ? true : false;
 
+  if(searchCost > 0) { // 중복
+    return -1*searchCost;
+  } else if(hashtable[mainIndex]){ // subtable이 할당되어 있으면
+    if(hashtable[mainIndex][subIndex]==0 || hashtable[mainIndex][subIndex]==TOMBSTONE){ // useable
+      hashtable[mainIndex][subIndex] = key;
+      num_of_keys++;
+      num_of_subkeys[mainIndex]++;
+    } else { //overflow
+      for(unsigned int i=1;;i++){
+        timeCost++;
+        index = hashFunction(isLinear ? key+i : key+(i*i));
+        mainIndex = index / sub_table_size;
+        subIndex = index % sub_table_size;
+
+        if(hashtable[mainIndex]){ // 새로 바뀐 index에 대하여 subtable이 할당되어 있으면
+          if(hashtable[mainIndex][subIndex]==0 || hashtable[mainIndex][subIndex]==TOMBSTONE){
+            hashtable[mainIndex][subIndex] = key;
+            num_of_keys++;
+            num_of_subkeys[mainIndex]++;
+            break;
+          }
+        } else { // 새로 바뀐 index에 대하여 subtable이 할당되어 있지않으면
+            hashtable[mainIndex] = new unsigned int [sub_table_size]();
+            hashtable[mainIndex][subIndex] = key;
+            num_of_keys++;
+            num_of_subkeys[mainIndex]++;
+            break;
+        }
+
+        if(!isLinear && (unsigned int)timeCost >= table_size){ // linear로 변경 후 다시 시작
+          i=0; // reset
+          isLinear = true;
+          timeCost++;
+        }
+      }
+    }
+  } else { // subtable이 할당되어 있지않으면
+    hashtable[mainIndex] = new unsigned int [sub_table_size]();
+    hashtable[mainIndex][subIndex] = key;
+    num_of_keys++;
+    num_of_subkeys[mainIndex]++;
+  }
+
+  if((double)num_of_keys/table_size >= alpha) resize(); // resize 필요 여부 확인
+  return timeCost;
+}
+
+void HierarchyHash::resize(){
+  unsigned int** origintable = hashtable;
+  table_size*=2;
+
+  // 초기화
+  num_of_keys = 0;
+  main_table_size = table_size/sub_table_size;
+	hashtable = new unsigned int *[main_table_size];
+  num_of_subkeys = new unsigned int [main_table_size]();
+  for(unsigned int i=0; i<main_table_size; i++){
+    hashtable[i] = NULL;
+	}
+
+  for(unsigned int i=0; i<main_table_size/2; i++){
+    if(origintable[i] == NULL) continue;
+    for(unsigned int j=0; j<sub_table_size; j++){
+      if(origintable[i][j]!=0 && origintable[i][j]!=TOMBSTONE) insert(origintable[i][j]);
+      else if(flag == QUADRATIC_PROBING) hashtable[i][j] = TOMBSTONE;
+    }
+	}
+  delete origintable;
+}
+
+void HierarchyHash::shifting(const unsigned int startMain, const unsigned int startSub){
+  unsigned int key; // shift할 key
+  unsigned int mainIndex; // shift할 key의 현재 index
+  unsigned int subIndex; // shift할 key의 현재 index
+  unsigned int currMainIndex = startMain; // 탐색 index
+  unsigned int currSubIndex = startSub; // 탐색 index
+  unsigned int tmpMainIndex; // 바꿀 위치 탐색 index
+  unsigned int tmpSubIndex; // 바꿀 위치 탐색 index
+
+  for(; currMainIndex < main_table_size; currMainIndex++){
+    if(hashtable[currMainIndex]==NULL) continue;
+    for(; currSubIndex < sub_table_size; currSubIndex++){
+      if(hashtable[currMainIndex][currSubIndex]!=0 && hashtable[currMainIndex][currSubIndex]!=TOMBSTONE){
+        mainIndex = currMainIndex;
+        subIndex = currSubIndex;
+        key = hashtable[mainIndex][subIndex];
+
+        for(unsigned int i=0;;i++){
+          tmpSubIndex = hashFunction(flag == LINEAR_PROBING ? key+i : key+(i*i));
+          tmpMainIndex = tmpSubIndex / sub_table_size;
+          tmpSubIndex = tmpSubIndex % sub_table_size;
+          if(tmpMainIndex > mainIndex) break;
+          else if(tmpMainIndex == mainIndex && tmpSubIndex >= subIndex) break;
+          else if(hashtable[tmpMainIndex][tmpSubIndex] == 0){
+            hashtable[tmpMainIndex][tmpSubIndex] = key;
+            hashtable[mainIndex][subIndex] = 0;
+          }
+        }
+      }
+    }
+    currSubIndex=0;
+  }
 }
 
 int HierarchyHash::remove(const unsigned int key)
 {
   // Write your code
+  int timeCost = 0;
+  int searchCost = search(key);
+  unsigned int index = hashFunction(key); // real index
+  unsigned int mainIndex = index / sub_table_size; // 메인 계층 내의 subtable 위치
+  unsigned int subIndex = index % sub_table_size; // subtable 내의 index
+  bool isLinear = flag == LINEAR_PROBING ? true : false;
 
+  if(searchCost < 0) { // 존재하지 않음
+    return searchCost;
+  } else {
+    for(unsigned int i=0;;i++){
+      timeCost++;
+      index = hashFunction(isLinear ? key+i : key+(i*i));
+      mainIndex = index / sub_table_size;
+      subIndex = index % sub_table_size;
+
+      if(hashtable[mainIndex] == NULL){
+        timeCost*=-1;
+        break;
+      } else if(hashtable[mainIndex][subIndex] == key){
+        hashtable[mainIndex][subIndex] = flag == LINEAR_PROBING ? 0 : TOMBSTONE;
+        num_of_keys--;
+        num_of_subkeys[mainIndex]--;
+        if(flag == LINEAR_PROBING) shifting(mainIndex, subIndex);
+        break;
+      } else if(hashtable[mainIndex][subIndex]==0 || hashtable[mainIndex][subIndex]==TOMBSTONE){ // 새로 바뀐 index에 대하여 subtable이 할당되어 있으면
+        timeCost*=-1;   
+        break;
+      } 
+
+      if(!isLinear && (unsigned int)timeCost >= table_size){ // linear로 변경 후 다시 시작
+        i=-1; // reset
+        isLinear = true;
+        timeCost++;
+      }
+    }
+  }
+  deleteSub();
+  return timeCost;
+}
+
+void HierarchyHash::deleteSub(){
+  bool isEmpty = true;
+  for(unsigned int i=0; i<main_table_size; i++){
+    if(hashtable[i] != NULL){
+      for(unsigned int j=0; j<sub_table_size; j++){
+        if(hashtable[i][j]!=0){
+          isEmpty=false;
+          break;
+        }
+      }
+      if(isEmpty){
+        delete hashtable[i];
+        hashtable[i]=NULL;
+      }
+      isEmpty=true;
+    }
+  }
 }
 
 int HierarchyHash::search(const unsigned int key)
 {
   // Write your code
+  int timeCost = 0;
+  unsigned int index = hashFunction(key); // real index
+  unsigned int mainIndex = index / sub_table_size; // 메인 계층 내의 subtable 위치
+  unsigned int subIndex = index % sub_table_size; // subtable 내의 index
+  bool isLinear = flag == LINEAR_PROBING ? true : false;
 
+  for(unsigned int i=0;;i++){
+    timeCost++;
+    index = hashFunction(isLinear ? key+i : key+(i*i));
+    mainIndex = index / sub_table_size;
+    subIndex = index % sub_table_size;
+
+    if(hashtable[mainIndex] == NULL){
+      timeCost*=-1;
+      break;
+    } else if(hashtable[mainIndex][subIndex] == key){
+      break;
+    } else if(hashtable[mainIndex][subIndex]==0 || hashtable[mainIndex][subIndex]==TOMBSTONE){ // 새로 바뀐 index에 대하여 subtable이 할당되어 있으면
+      timeCost*=-1;   
+      break;
+    } 
+
+    if(!isLinear && (unsigned int)timeCost >= table_size){ // linear로 변경 후 다시 시작
+      i=-1; // reset
+      isLinear = true;
+      timeCost++;
+    }
+  }
+  
+  return timeCost;
 }
 
 void HierarchyHash::clearTombstones()
 {
   // Write your code
-  
+  unsigned int** origintable = hashtable;
+  num_of_keys = 0;
+	hashtable = new unsigned int *[main_table_size];
+  num_of_subkeys = new unsigned int [main_table_size]();
+  for(unsigned int i=0; i<main_table_size; i++){
+    hashtable[i] = NULL;
+	}
+
+  for(unsigned int i=0; i<main_table_size; i++){
+    if(origintable[i] == NULL) continue;
+    for(unsigned int j=0; j<sub_table_size; j++){
+      if(origintable[i][j]!=0 && origintable[i][j]!=TOMBSTONE) insert(origintable[i][j]);
+    }
+	}
+  delete origintable;
 }
 
 void HierarchyHash::print()
@@ -114,7 +344,21 @@ void HierarchyHash::print()
   }
 
   // Write your code
-
+  unsigned int count = 0;
+  for(unsigned int i=0; i<main_table_size; i++){
+    if(hashtable[i]){
+      count = 0;
+      cout << i << ":(";
+      for(unsigned int j=0; j<sub_table_size; j++){
+        if(hashtable[i][j]!=0 && hashtable[i][j]!=TOMBSTONE){
+          count++;
+          cout << (i*sub_table_size)+j << ":" << hashtable[i][j];
+          if(count<num_of_subkeys[i]) cout<<",";
+        }
+      }
+      std::cout << ")" << std::endl;
+    }
+  }
 }
 
 #endif
