@@ -35,6 +35,8 @@ public:
 
   unsigned int getNumofKeys() { return num_of_keys; }
 
+  unsigned int getValue(unsigned int index) { return hashtable[index]; }
+
   // Return time cost
   int insert(const unsigned int key);
   void resize();

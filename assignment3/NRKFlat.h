@@ -128,6 +128,29 @@ int NRKFlat::insert(const unsigned int key)
   counters[h1]++;
   counters[h2]++;
   counters[h3]++;
+
+  if(filter_size != getTableSize()){
+    unsigned int value;
+    unsigned int* originCounter = counters;
+    filter_size = getTableSize();
+    counters = new unsigned int [filter_size]();
+
+    for(unsigned int i=0; i<filter_size/2; i++){
+      value = getValue(i);
+      if(value){
+        getMMHashValue(value, h1, h2, h3);
+        h1=hashFunction(h1);
+        h2=hashFunction(h2);
+        h3=hashFunction(h3);
+
+        counters[h1]++;
+        counters[h2]++;
+        counters[h3]++;
+      }
+    }
+
+    delete[] originCounter;
+  }
   return FlatHash::insert(key);
 }
 
