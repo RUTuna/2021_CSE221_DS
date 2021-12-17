@@ -238,6 +238,34 @@ class Tree_t {
 
         void rotate(Node_t<keyT, valT>* n, bool direction) {
             // Implement rotation here
+            if(!n) return;
+            Node_t<keyT, valT>* temp;
+            if(direction){ // R rotation
+                assert(n->left != nullptr); // null이면 error
+                temp = n->left;
+                n->left = temp->right;
+                if(temp->right != nullptr) n->left->parent = n; // n의 Lchild에 Rchild가 있다면
+                temp->right = n;
+            } else { // L Rotation
+                assert(n->right != nullptr); // null이면 error
+                temp = n->right;
+                n->right = temp->left;
+                if(temp->left != nullptr) n->right->parent = n; // n의 Rchild에 Lchild가 있다면
+                temp->left = n;
+            }
+
+            if(n == root) { // n이 root였다면
+                root = temp;
+                temp->parent = nullptr; // temp를 root로
+            } else if(n == n->parent->left) { // n이 Lchild였다면
+                n->parent->left = temp; // n의 parent의 left를 temp로
+                temp->parent = n->parent; // temp의 parent를 n의 parent로
+            } else { // n이 Rchild였다면
+                n->parent->right = temp; // n의 parent의 right를 temp로
+                temp->parent = n->parent; // temp의 parent를 n의 parent로
+            }
+            n->parent = temp; // n의 parent를 temp로
+            n = temp;
         }
 };
 #endif
