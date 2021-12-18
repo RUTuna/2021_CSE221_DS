@@ -37,16 +37,28 @@ class AVLTree_t : public Tree_t<keyT, valT> {
     // These are here to guide you, but you can just ignore these.
     Node_t<keyT, valT>* balance(Node_t<keyT, valT>* a) {
         // Make tree balanced
+        Node_t<keyT, valT>* temp = a->parent;
         if(a->meta > 1){ // LL or LR
-            if(a->left->meta < 0) { Tree_t<keyT, valT>::rotate(a->left, false);} // Only LR, Lrotate at a's Lchild
-            Tree_t<keyT, valT>::rotate(a, true); // LR, LL both, Rroate at a
-
+            if(a->left->meta < 0) { // LR,
+                temp = a->left->right;
+                Tree_t<keyT, valT>::rotate(a->left, false); // Lrotate at a's Lchild
+                Tree_t<keyT, valT>::rotate(a, true); // Rroate at a
+            } else { // LL
+                temp = a->left;
+                Tree_t<keyT, valT>::rotate(a, true); // Rroate at a
+            }
         } else if(a->meta < -1){ // RR or RL
-            if(a->right->meta > 0) {Tree_t<keyT, valT>::rotate(a->right, true);} // Only RL, Rrotate at a's Rchild
-            Tree_t<keyT, valT>::rotate(a, false); // LR, LL both, Rroate at a
-        } else if(a->parent == nullptr) { // root면 종료  
-            return a;
-        } else balance(a->parent);
+            if(a->right->meta > 0) { // RL
+                temp = a->right->left;
+                Tree_t<keyT, valT>::rotate(a->right, true); // Rrotate at a's Rchild
+                Tree_t<keyT, valT>::rotate(a, false); // Lroate at a
+            } else { // RR
+                temp = a->right;
+                Tree_t<keyT, valT>::rotate(a, false); // Lroate at a
+            }
+        }
+        a = temp;
+        return a;
     }
 
     // Node_t<keyT, valT>* insert_internal(keyT key, valT value) {
@@ -63,12 +75,18 @@ public:
         // create a new one, place it in the right place, and store the value.
         // If there already is a node that has the given key,
         // update the value, rather than making a new one.
-        Node_t<keyT, valT>* root = Tree_t<keyT, valT>::root;
         Node_t<keyT, valT>* n = Tree_t<keyT, valT>::insert_internal(key,value);
+        Node_t<keyT, valT>* root = Tree_t<keyT, valT>::root;
         set_bf(root);
-        balance(n);
-        root = Tree_t<keyT, valT>::root;
-        set_bf(root);
+        while(true){
+            root = Tree_t<keyT, valT>::root;
+            set_bf(root);
+            if(n == nullptr){
+                break;
+            } else {
+                n = balance(n);
+            }
+        }
     }
 
     bool remove(keyT key) {
@@ -77,14 +95,21 @@ public:
         if(!root) return false;
         Node_t<keyT, valT>* n = Tree_t<keyT, valT>::search_subtree(root,key);
         Node_t<keyT, valT>* np = nullptr;
-        if(n && n->key == key){
-            if(n!=root) np = n->parent;
+        if(n && n->key == key){ // exist
+            np = n->parent;
             Tree_t<keyT, valT>::remove_node(n);
-            root = Tree_t<keyT, valT>::root;
-            set_bf(root);
-            if(n!=root) balance(np);
+
+            while(true){
+                root = Tree_t<keyT, valT>::root;
+                set_bf(root);
+                if(np == nullptr){
+                    break;
+                } else {
+                    np = balance(np);
+                }
+            }
             return true;
-        } else return false;
+        } else return false; // not exist
 
     }
 };
